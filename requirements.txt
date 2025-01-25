@@ -2,6 +2,5 @@ Flask
 numpy
 pandas
 scikit-learn
-fuzzywuzzy
+rapidfuzz
 python-Levenshtein
-requests

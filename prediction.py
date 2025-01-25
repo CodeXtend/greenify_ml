@@ -6,6 +6,8 @@ import requests
 from rapidfuzz import process
 import json
 import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 class AgriculturePredictor:
     def __init__(self):
@@ -250,35 +252,31 @@ class AgriculturePredictor:
             'total_profit': round(total_profit, 2)
         }
 
-if __name__ == "__main__":
+app = Flask(__name__)
+CORS(app)
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        data = request.get_json()
+        location = data.get('location')
+        land_area = float(data.get('land_area'))
+        soil_condition = data.get('soil_condition')
+        crop_type = data.get('crop_type')
+
+        predictor = AgriculturePredictor()
+        result = predictor.predict_crop(location, land_area, soil_condition, crop_type)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/options', methods=['GET'])
+def get_options():
     predictor = AgriculturePredictor()
-    
-    print("\nAvailable options:")
-    print("Location: Enter any Indian city/village name")
-    print(f"Soil conditions: {', '.join(predictor.valid_soil_conditions)}")
-    print("Crop types: Enter any crop name (e.g., rice, wheat, potato, tomato, etc.)\n")
-    
-    location = input("Enter location: ")
-    land_area = float(input("Enter land area (in acres): "))
-    soil_condition = input("Enter soil condition (sandy/clay/loamy): ")
-    crop_type = input("Enter crop type: ")
-    
-    result = predictor.predict_crop(location, land_area, soil_condition, crop_type)
-    
-    if "error" in result:
-        print(f"\nError: {result['error']}")
-    else:
-        print("\nPrediction Results:")
-        print("-" * 50)
-        print(f"Crop Type: {result['crop'].title()}")
-        print(f"Location: {result['location']}")
-        print(f"Expected Yield: {result['predicted_yield']:,.2f} tons")
-        print(f"Expected Waste: {result['predicted_waste']:,.2f} tons")
-        print("\nFinancial Analysis:")
-        print("-" * 50)
-        print(f"Crop Price per ton: ₹{result['price_per_ton']:,.2f}")
-        print(f"Waste Price per ton: ₹{result['waste_price_per_ton']:,.2f}")
-        print(f"Crop Revenue: ₹{result['crop_profit']:,.2f}")
-        print(f"Waste Revenue: ₹{result['waste_profit']:,.2f}")
-        print("-" * 50)
-        print(f"Total Estimated Profit: ₹{result['total_profit']:,.2f}")
+    return jsonify({
+        "soil_conditions": predictor.valid_soil_conditions,
+        "crops": list(predictor.crops_data.keys())
+    })
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
